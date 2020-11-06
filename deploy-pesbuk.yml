@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pesbuk-service
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+  #type: LoadBalancer
+  selector:
+    app: php-pesbuk
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pesbuk-deployment
+  labels:
+    app: php-pesbuk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: php-pesbuk
+      track: stable
+  template:
+    metadata:
+      labels:
+        app: php-pesbuk
+        track: stable
+    spec:
+      containers:
+      - name: php-pesbuk
+        image: irpank/app-pesbuk:latest
+        ports:
+        - containerPort: 80
+        env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: pb-secret
+                  key: DB_HOST
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pb-secret
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: pb-secret
+                  key: DB_PASS
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: pesbuk-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: pesbuk.komarudins.online
+    http:
+      paths:
+      #- path: /
+      - backend:
+          serviceName: pesbuk-service
+          servicePort: 80
